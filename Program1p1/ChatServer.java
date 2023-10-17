@@ -12,7 +12,7 @@ import java.util.*; // for Vector
 
 public class ChatServer{
     //a list of existing client connection  
-    List<socket> connections = new ArrayList<>(); 
+    List<Socket> connections = new ArrayList<>(); 
 
     /*
      * Creates a server socket with a given port and goes into an 
@@ -39,26 +39,27 @@ public class ChatServer{
                 //if this connection is not null 
                 if(clientSocket != null){
                     //add the new connection into the list of existing connections
-                    connection.add(clientSocket); 
+                    connections.add(clientSocket); 
                 }
                  
                 //for each connection, read a new message and write it to all existing connections 
-                for(int i = 0; i < connections.length; i++){
+                for(Socket i : connections){
                     // read a new message if exist 
                     // make sure that this read won't be blocked.
-                    String msg = connections[i].readMessage(); 
+                    Connection connection = new Connection(i); 
+                    String msg = connection.readMessage(); 
                     // if you got a message, write it to all connections.
-                    for(int j = 0; l < connections.length; j++){
-                        if(j != i){
-                            connections[j].writeMessage(msg); 
+                    for(Socket j : connections){
+                        if(!i.equals(j)){
+                            Connection targetConnection = new Connection(j); 
+                            targetConnection.writeMessage(msg); 
                         }
                     }
                     
                     //close and delete this connection if the client disconnected it
                     if(msg == null){
-                        connections[i].close();
+                        i.close();
                         connections.remove(i); 
-                        i--;  
                     }
                     
                 }
@@ -77,12 +78,12 @@ public class ChatServer{
      public static void main(String args[]){
         //check if args[0] has port 
         if(args.length != 1){
-            system.err.println("Syntax: java ChatServer <port>"); 
-            system.exit(1); 
+            System.err.println("Syntax: java ChatServer <port>"); 
+            System.exit(1); 
         }
 
         //start a chat server 
-        new CharServer(integer.parseInt(args[0])); 
+        new ChatServer(Integer.parseInt(args[0])); 
      }
 
      /*
@@ -90,7 +91,7 @@ public class ChatServer{
       */
 
       private class Connection{
-        private Socket socket;          //a socket of this connection 
+        private Socket clientsocket;    //a socket of this connection 
         private InputStream rawIn;      //a byte-stream input from client 
         private OutputStream rawOut;    //a byte-stream output to client 
         private DataInputStream in;     //a filterd input from client 
@@ -105,7 +106,7 @@ public class ChatServer{
          */
 
         public Connection(Socket client){
-            socket = client; 
+            clientsocket = client; 
            
             try{
                 //from socket, initializes rawIn, rawOut, in, and out 
@@ -124,14 +125,14 @@ public class ChatServer{
         }
 
         /*
-         * reads a new message in unicode format and returnd it with this clients name
+         * reads a new message in unicode format and returns it with this clients name
          * 
          * @return: a unicode message eith the clients name 
          */
 
         public String readMessage(){
             String s = "";
-            try{
+            try{ 
                 //the message is available and there are still bytes to read 
                 if(in.available() > 0){
                     //read the message
@@ -154,7 +155,7 @@ public class ChatServer{
          * @param message: a string to wrote to the client 
          */
 
-        public void writeMessage(String message){
+        public void writeMessage(String message){ 
             //write a message 
             try{
                 out.writeUTF(message); 
@@ -163,8 +164,13 @@ public class ChatServer{
             }
             //if an exception occurs, you can identify that this connection was gone 
             catch(IOException e){
-                e.printStackTrace(); 
-                clientSocket.close(); 
+                e.printStackTrace();
+                try{
+                    this.clientsocket.close();
+                } 
+                catch(IOException e2){
+                    e2.printStackTrace(); 
+                }
             }
         }
 
@@ -174,7 +180,7 @@ public class ChatServer{
 
          public boolean isAlive(){
             //if the connection is broken, return false
-            if(clientSocket.isConnected()){
+            if(this.clientsocket.isConnected()){
                 return true; 
             }
             return false; 

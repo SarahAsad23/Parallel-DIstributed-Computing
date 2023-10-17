@@ -33,8 +33,8 @@ public class ChatClient {
             rawIn = socket.getInputStream(); 
             //create input and output and the standard output stream 
             in = new DataInputStream (rawIn); 
-            out = new DataOutputStream(scoket.getOutputStream()); 
-            stdin = new BufferedReader(new InputStreamReader(system.in)); 
+            out = new DataOutputStream(socket.getOutputStream()); 
+            stdin = new BufferedReader(new InputStreamReader(System.in)); 
             //send the client name to the server 
             out.writeUTF(name); 
 
@@ -54,7 +54,7 @@ public class ChatClient {
                 //and write id down to the standard input
                 if(rawIn.available() > 0){
                     String s = in.readUTF(); 
-                    system.out.println(s); 
+                    System.out.println(s); 
                 }
             }
 
@@ -76,11 +76,11 @@ public class ChatClient {
     public static void main(String args[]){
     //check number of arguments 
     if(args.length != 3){
-        system.err.println("Syntax: java ChatClient <yourNamr> <ServerIpName> <port>"); 
-        system.exit(1); 
+        System.err.println("Syntax: java ChatClient <yourNamr> <ServerIpName> <port>"); 
+        System.exit(1); 
     }
     //convert args[2] into int that will be used a s port 
-    int port = integer.parseInt(args[2]); 
+    int port = Integer.parseInt(args[2]); 
     new ChatClient(args[0], args[1], port); 
     }
 }
