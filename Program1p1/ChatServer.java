@@ -6,11 +6,9 @@
  * to all exisiting and available server connections
 */
 
-
 import java.net.*; // for Socket and ServerSocket
 import java.io.*; // for IOException
 import java.util.*; // for Vector
-
 
 public class ChatServer{
     //a list of existing client connection  
@@ -101,9 +99,9 @@ public class ChatServer{
         private boolean alive;          //indicates if the connection is alive
 
         /*
-         * creates a new connection with a givn socket 
+         * creates a new connection with a given socket 
          * 
-         * @param client: a cocket representing a new chat client 
+         * @param client: a socket representing a new chat client 
          */
 
         public Connection(Socket client){
@@ -188,6 +186,9 @@ public class ChatServer{
             return false; 
          }
 
+         /*
+          * closes the client socket 
+          */
          private void closeConnection() {
             try {
                 this.clientsocket.close();

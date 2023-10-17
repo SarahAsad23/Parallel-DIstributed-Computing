@@ -51,7 +51,7 @@ public class ChatClient {
                 }
 
                 //if the server gives me a message, read it from the server
-                //and write id down to the standard input
+                //and write ii down to the standard input
                 if(rawIn.available() > 0){
                     String s = in.readUTF(); 
                     System.out.println(s); 
