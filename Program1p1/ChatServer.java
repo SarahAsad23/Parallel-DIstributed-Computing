@@ -6,9 +6,11 @@
  * to all exisiting and available server connections
 */
 
+
 import java.net.*; // for Socket and ServerSocket
 import java.io.*; // for IOException
 import java.util.*; // for Vector
+
 
 public class ChatServer{
     //a list of existing client connection  
@@ -37,34 +39,29 @@ public class ChatServer{
                 //accept a new connection 
                 try{
                     Socket clientSocket = server.accept();
+                    //if this connection is not null
                     if(clientSocket != null){
                         //add the new connection into the list of existing connections
                         Connection c = new Connection(clientSocket); 
                         connections.add(c); 
                     }
                 }catch(SocketTimeoutException e) {}
-                //if this connection is not null 
-                
                  
-                //for each connection, read a new message and write it to all existing connections 
-                for(Connection r : connections){
-                    // read a new message if exist 
-                    // make sure that this read won't be blocked.
-                    //Connection connection = new Connection(r); 
+                Iterator<Connection> it = connections.iterator(); 
+                while(it.hasNext()){
+                    Connection r = it.next(); 
                     String msg = r.readMessage(); 
                     if(msg != null){
-                        // if you got a message, write it to all connections.
                         for(Connection s : connections){
                             if(!r.equals(s)){
-                                //Connection targetConnection = new Connection(s); 
                                 s.writeMessage(msg); 
                             }
                         }
                     }
                     else{
-                        //close and delete this connection if the client disconnected it
-                        //connection.deleteSocket(); 
-                        connections.remove(r);
+                        if(!r.isAlive()){
+                            it.remove(); 
+                        }
                     }
                 }
             }
@@ -146,6 +143,7 @@ public class ChatServer{
             }
             catch(IOException e){
                 e.printStackTrace(); 
+                closeConnection(); 
             }
 
             //otherwise, skip reading
@@ -189,8 +187,17 @@ public class ChatServer{
             }
             return false; 
          }
+
+         private void closeConnection() {
+            try {
+                this.clientsocket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }
+
 
 
 
