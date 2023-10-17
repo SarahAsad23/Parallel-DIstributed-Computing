@@ -12,7 +12,7 @@ import java.util.*; // for Vector
 
 public class ChatServer{
     //a list of existing client connection  
-    List<Socket> connections = new ArrayList<>(); 
+    List<Connection> connections = new ArrayList<>(); 
 
     /*
      * Creates a server socket with a given port and goes into an 
@@ -35,33 +35,37 @@ public class ChatServer{
             
             while(true){
                 //accept a new connection 
-                Socket clientSocket = server.accept(); 
+                try{
+                    Socket clientSocket = server.accept();
+                    if(clientSocket != null){
+                        //add the new connection into the list of existing connections
+                        Connection c = new Connection(clientSocket); 
+                        connections.add(c); 
+                    }
+                }catch(SocketTimeoutException e) {}
                 //if this connection is not null 
-                if(clientSocket != null){
-                    //add the new connection into the list of existing connections
-                    connections.add(clientSocket); 
-                }
+                
                  
                 //for each connection, read a new message and write it to all existing connections 
-                for(Socket i : connections){
+                for(Connection r : connections){
                     // read a new message if exist 
                     // make sure that this read won't be blocked.
-                    Connection connection = new Connection(i); 
-                    String msg = connection.readMessage(); 
-                    // if you got a message, write it to all connections.
-                    for(Socket j : connections){
-                        if(!i.equals(j)){
-                            Connection targetConnection = new Connection(j); 
-                            targetConnection.writeMessage(msg); 
+                    //Connection connection = new Connection(r); 
+                    String msg = r.readMessage(); 
+                    if(msg != null){
+                        // if you got a message, write it to all connections.
+                        for(Connection s : connections){
+                            if(!r.equals(s)){
+                                //Connection targetConnection = new Connection(s); 
+                                s.writeMessage(msg); 
+                            }
                         }
                     }
-                    
-                    //close and delete this connection if the client disconnected it
-                    if(msg == null){
-                        i.close();
-                        connections.remove(i); 
+                    else{
+                        //close and delete this connection if the client disconnected it
+                        //connection.deleteSocket(); 
+                        connections.remove(r);
                     }
-                    
                 }
             }
         }
