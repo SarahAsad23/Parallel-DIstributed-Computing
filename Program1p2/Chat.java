@@ -9,10 +9,10 @@ public class Chat {
     private ObjectInputStream[] inputs = null;   // a message from i
     private ObjectOutputStream[] outputs = null; // a message to i
 
-    private int[] vector = null;                         //vector stamp 
-    private Vector<int[]> vec_queue = new Vector<>();    //maintains vector stamps from the others
-    private Vector<String> msg_queue = new Vector<>();   //maintain actual messagge from the others 
-    private Vector<integer> src_queue = new Vector<>();  //maintain source ID's
+    private int[] vector = null;        //vector stamp 
+    private Vector<int[]> vec_queue;    //maintains vector stamps from the others
+    private Vector<String> msg_queue;   //maintain actual messagge from the others 
+    private Vector<integer> src_queue;  //maintain source ID's
     
     
     /**
@@ -50,8 +50,7 @@ public class Chat {
                         //j is the source host's rank 
                         System.out.println("accepted from " + src_host);
 
-                        //store the source host j's connection, input stream 
-                        //and object input.output streams
+                        //store the source host j's connection, input stream and object input/output streams
                         sockets[j] = socket; 
                         indata[j] = socket.getInputStream(); 
                         inputs[j] = new ObjectInputStream(indata[j]); 
@@ -98,20 +97,30 @@ public class Chat {
                 }
 
                 //read the message from each of the chat memebers 
-                for(int i = 0; i < h0osts.length; i++){
-                    //for intentional message misordering, 
-                    //slow down chat memeber #2
+                for(int i = 0; i < hosts.length; i++){
+                    //for intentional message misordering, slow down chat memeber #2
                     try{
                         if(rank == 2){
                             Thread.currentThread.sleep(5000); //sleep for 5 seconds 
                         }catch(InterruptedException e) {}
 
-                        //check if chat member #1 has something 
+                        //check if chat member i has something 
                         if(i != rank && indata[i].available() > 0){
-                            //read the message from chat member !1 and print to out 
                             try{
-                                String message = (String) inputs[i].readObject(); 
-                                System.out.println(hosts[i] + ": " + message); 
+
+                                int[] vec = (int[]) inputs.readObject(); //this will be a vector
+                                String message = (String) inputs[i].readObject(); //actual message 
+
+                                
+
+                                System.out.println(hosts[i] + ": " + message);
+
+
+
+
+
+                                
+                                
                             } catch(ClassNotFoundException e) {}
                         }
                     }
