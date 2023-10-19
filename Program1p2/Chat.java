@@ -2,8 +2,8 @@
  * Sarah Asad 
  * CSS 434: Parallel and Distibuted Computing
  * 
- * Chat.java: creates a coompete network between all clients, sends messages in casual 
- * order even when there are recieve delays by queuing elements in various vectors 
+ * Chat.java: creates a complete network between all clients, sends messages in casual 
+ * order even when there are receive delays by queuing elements in various vectors 
 */
 
 import java.net.*;  // ServerSocket, Socket
@@ -12,7 +12,7 @@ import java.util.ArrayList; //ArrayList
 
 public class Chat {
 
-    // Each element i of the follwoing arrays represent a chat member[i]
+    // Each element i of the following arrays represent a chat member[i]
     private Socket[] sockets = null;             // connection to i
     private InputStream[] indata = null;         // used to check data from i
     private ObjectInputStream[] inputs = null;   // a message from i
@@ -20,8 +20,8 @@ public class Chat {
     private int[] vector = null;
 
     private ArrayList<int[]>   vec_queue = new ArrayList<int[]>( );    // maintains vector stamps from the others
-    private ArrayList<String>  msg_queue = new ArrayList<String>( );   //maintain actual messages from the others
-    private ArrayList<Integer> src_queue = new ArrayList<Integer>( );  //maintain source IDs
+    private ArrayList<String>  msg_queue = new ArrayList<String>( );   // maintain actual messages from the others
+    private ArrayList<Integer> src_queue = new ArrayList<Integer>( );  // maintain source IDs
 
 
      /**
