@@ -163,36 +163,22 @@ public class Heat2D_mpi {
 		}		
 	
 
-	// display intermediate results
-	//System.out.println("rank = " + myRank + ", Displaying Results v2");
+		// display intermediate results
+		//System.out.println("rank = " + myRank + ", Displaying Results v2");
 
-	  // display intermediate results
-	  if(myRank == 0){
-		if ( interval != 0 && ( t % interval == 0 || t == max_time - 1 ) ) {
-			System.out.println( "time = " + t );
-			for ( int y = 0; y < size; y++ ) {
-				for ( int x = 0; x < size; x++ )
-					System.out.print((int)( Math.floor(z[index(p, x, y, size)] / 2) ) + " " );
-					System.out.println( );
+		// display intermediate results
+		if(myRank == 0){
+			if ( interval != 0 && ( t % interval == 0 || t == max_time - 1 ) ) {
+				System.out.println( "time = " + t );
+				for ( int y = 0; y < size; y++ ) {
+					for ( int x = 0; x < size; x++ )
+						System.out.print((int)( Math.floor(z[index(p, x, y, size)] / 2) ) + " " );
+						System.out.println( );
+				}
+				System.out.println( );
 			}
-			System.out.println( );
 		}
-	}
-
-	/* 
-	if (myRank == 0) {
-		for ( int y = 0; y < size; y++ ) {
-			for ( int x = 0; x < size; x++ ) {
-				System.out.print((int)( Math.floor(z[index(p, x, y, size)] / 2) ) + " " );
-	  		}	
-			
-			System.out.println( );
-		}
-		System.out.println( );
-	}
-	*/
-
-		//System.out.println("rank = " + myRank + ", time = " + t );
+	
 	} // end of simulation
 	
 
