@@ -4,17 +4,13 @@ public class Heat2D {
     private static double a = 1.0;  // heat speed
     private static double dt = 1.0; // time quantum
     private static double dd = 2.0; // change in system
-
-	//function used compute index 
-	public static int index (int p, int x, int y, int size){
-		return p * size * size + x * size + y;
-	}
     
     public static void main( String[] args ) {
 	// verify arguments
 	if ( args.length != 4 ) {
 	    System.out.
-		println( "usage: " + `"java Heat2D size max_time heat_time interval" );
+		println( "usage: " + 
+			 "java Heat2DO size max_time heat_time interval" );
 	    System.exit( -1 );
 	}
 
@@ -29,7 +25,7 @@ public class Heat2D {
 	for ( int p = 0; p < 2; p++ ) 
 	    for ( int x = 0; x < size; x++ )
 		for ( int y = 0; y < size; y++ )
-		    z[index(p, x, y, size)] = 0.0; // no heat or cold
+		    z[p][x][y] = 0.0; // no heat or cold
 	
 	// start a timer
 	Date startTime = new Date( );
@@ -40,20 +36,20 @@ public class Heat2D {
 	    
 	    // two left-most and two right-most columns are identical
 	    for ( int y = 0; y < size; y++ ) {
-		z[index(p, 0, y, size)] = z[index(p, 1, y, size)];
-		z[index(p, size - 1, y, size)] = z[index(p, size - 2, y, size)];
+		z[p][0][y] = z[p][1][y];
+		z[p][size - 1][y] = z[p][size - 2][y];
 	    }
 	    
 	    // two upper and lower rows are identical
 	    for ( int x = 0; x < size; x++ ) {
-			z[index(p, x, 0, size)] = z[index(p, x, 1, size)];
-		z[index(p, x, size - 1, size)] = z[index(p, x, size - 2, size)];
+		z[p][x][0] = z[p][x][1];
+		z[p][x][size - 1] = z[p][x][size - 2];
 	    }
 	    
 	    // keep heating the bottom until t < heat_time
 	    if ( t < heat_time ) {
 		for ( int x = size /3; x < size / 3 * 2; x++ )
-		z[index(p, x, 0, size)] = 19.0; // heat
+		    z[p][x][0] = 19.0; // heat
 	    }
 
 	    // display intermediate results
@@ -73,9 +69,9 @@ public class Heat2D {
 	    int p2 = (p + 1) % 2;
 	    for ( int x = 1; x < size - 1; x++ )
 		for ( int y = 1; y < size - 1; y++ )
-		z[index(p2, x, y, size)] = z[index(p, x, y, size)] + 
-			r * ( z[index(p, x + 1, y, size)] - 2 * z[index(p, x, y, size)] + z[index(p, x - 1, y, size)] ) +
-			r * ( z[index(p, x, y + 1, size)] - 2 * z[index(p, x, y, size)] + z[index(p, x, y - 1, size)] );
+		    z[p2][x][y] = z[p][x][y] + 
+			r * ( z[p][x+1][y] - 2 * z[p][x][y] + z[p][x-1][y] ) +
+			r * ( z[p][x][y+1] - 2 * z[p][x][y] + z[p][x][y-1] );
 	    
 	} // end of simulation
 	
