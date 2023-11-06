@@ -184,6 +184,11 @@ public class Heat2D_mpi {
 
 	// finish the timer
 	Date endTime = new Date( );
+
+	try {
+    Thread.sleep(3000);
+	} catch (InterruptedException e) {}
+
 	System.out.println( "Elapsed time = " + ( endTime.getTime( ) - startTime.getTime( ) ) );	
 	MPI.Finalize(); 
     }
