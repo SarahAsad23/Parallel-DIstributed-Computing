@@ -91,19 +91,6 @@ public class Heat2D_mpi {
 			}
 		}
 
-		// Calculate Eulers equation for local stripe 
-		int p2 = (p + 1) % 2;
-		for(int x = begin + 1; x < end - 1; x++){
-			for(int y = 1; y < size - 1; y++){
-				z[index(p2, x, y, size)] = z[index(p, x, y, size)] + 
-				r * ( z[index(p, x + 1, y, size)] - 2 * z[index(p, x, y, size)] + z[index(p, x - 1, y, size)] ) +
-				r * ( z[index(p, x, y + 1, size)] - 2 * z[index(p, x, y, size)] + z[index(p, x, y - 1, size)] );
-			}
-		}
-
-		//synchronize after computing local stripe - make sure each rank has finished their local computation 
-		MPI.COMM_WORLD.Barrier(); 
-
 		// to prevent deadlocks, we will make sure all even ranks first send   
 		// and then recieve all odd ranks will first receive and then send
 
@@ -176,6 +163,16 @@ public class Heat2D_mpi {
 						System.out.println( );
 				}
 				System.out.println( );
+			}
+		}
+
+		// Calculate Eulers equation for local stripe 
+		int p2 = (p + 1) % 2;
+		for(int x = begin + 1; x < end - 1; x++){
+			for(int y = 1; y < size - 1; y++){
+				z[index(p2, x, y, size)] = z[index(p, x, y, size)] + 
+				r * ( z[index(p, x + 1, y, size)] - 2 * z[index(p, x, y, size)] + z[index(p, x - 1, y, size)] ) +
+				r * ( z[index(p, x, y + 1, size)] - 2 * z[index(p, x, y, size)] + z[index(p, x, y - 1, size)] );
 			}
 		}
 	
