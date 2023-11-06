@@ -11,7 +11,8 @@ public class Heat2D {
 		return p * size * size + x * size + y;
 	}
 
-    public static void main( String[] args ) {
+	//add throws MPIException or else lots of errors 
+    public static void main( String[] args ) throws MPIException{
 	
 	// verify arguments
 	if ( args.length != 4 ) {
@@ -71,7 +72,7 @@ public class Heat2D {
 		if(myRank % 2 == 0){
 			// send left and receive from right 
 			if(myRank > 0){
-				MPI.COMM_WORLD.send(z, index(p, begin, 0, size), size, MPI.DOUBLE, myRank - 1, 0);
+				MPI.COMM_WORLD.Send(z, index(p, begin, 0, size), size, MPI.DOUBLE, myRank - 1, 0);
 				MPI.COMM_WORLD.Recv(z, index(p, begin - 1, 0, size), size, MPI.DOUBLE, myRank - 1, 0);
 			}
 			// send right and recieve from left 
@@ -95,20 +96,15 @@ public class Heat2D {
 		}
 	    
 	    // display intermediate results
-	    if ( interval != 0 && 
-		 ( t % interval == 0 || t == max_time - 1 ) ) {
-		System.out.println( "time = " + t );
-		for ( int y = 0; y < size; y++ ) {
-		    for ( int x = 0; x < size; x++ )
-			System.out.print( (int)( Math.floor(z[p][x][y] / 2) ) 
-					  + " " );
-		    System.out.println( );
-		}
-		System.out.println( );
+	    if ( interval != 0 && ( t % interval == 0 || t == max_time - 1 ) ) {
+			System.out.println( "time = " + t );
+			for ( int y = 0; y < size; y++ ) {
+				for ( int x = 0; x < size; x++ )
+				System.out.print( (int)( Math.floor(z[index(p, x, y, size)] / 2) ) + " " );
+				System.out.println( );
+			}
+			System.out.println( );
 	    }
-	    
-	    
-	    
 	} // end of simulation
 	
 	// finish the timer
