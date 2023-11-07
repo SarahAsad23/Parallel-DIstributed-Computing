@@ -133,7 +133,7 @@ public class Heat2D_mpi {
 
 		if(myRank == 0){
 			// Receive slices from everyone else.
-			for (int x = slice_width, rank = 1; rank < 4; x += slice_width, rank++) {
+			for (int x = slice_width, rank = 1; rank < mpiSize; x += slice_width, rank++) {
 				MPI.COMM_WORLD.Recv(z, index(p, x, 0, size), slice_size, MPI.DOUBLE, rank, 0);
 			}
 			
@@ -172,8 +172,7 @@ public class Heat2D_mpi {
     Thread.sleep(1000);
 	} catch (InterruptedException e) {}
 
-	System.out.println( "Elapsed time = " + ( endTime.getTime( ) - startTime.getTime( ) ) );	
-	System.out.println( "Done: " + myRank );	
+	System.out.println( "Elapsed time = " + ( endTime.getTime( ) - startTime.getTime( ) ) );
 	MPI.Finalize(); 
 
     }
