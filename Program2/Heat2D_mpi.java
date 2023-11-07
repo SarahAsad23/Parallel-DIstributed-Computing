@@ -6,11 +6,12 @@ public class Heat2D_mpi {
     private static double dt = 1.0; // time quantum
     private static double dd = 2.0; // change in system
 
-	//function used compute index 
+	// function used compute index 
 	public static int index (int p, int x, int y, int size){
 		return p * size * size + x * size + y;
 	}
 
+	// for easy debugging 
 	public static void display(int rank, String op, int toRank) {
 		System.out.println("Rank " + rank + ": " + op + " => " + toRank);
 	}
@@ -27,11 +28,11 @@ public class Heat2D_mpi {
 
 	System.out.println("Starting.....................");
 
-	//initialize MPI 
+	// initialize MPI 
 	MPI.Init(args); 
 
-	int myRank = MPI.COMM_WORLD.Rank(); //my rank 
-	int mpiSize = MPI.COMM_WORLD.Size(); //number of members
+	int myRank = MPI.COMM_WORLD.Rank();  // my rank 
+	int mpiSize = MPI.COMM_WORLD.Size(); // number of members
 
 	int size = Integer.parseInt( args[0] );
 	int max_time = Integer.parseInt( args[1] );
@@ -39,11 +40,11 @@ public class Heat2D_mpi {
 	int interval  = Integer.parseInt( args[3] );
 	double r = a * dt / ( dd * dd );
 
-	//compute the number of strips we need to have 
+	// compute the number of strips we need to have 
 	int stripe = size / mpiSize; 
 	int remainder = size % mpiSize;
 	
-	//compute the beginning and end of each ranks stripe 
+	// compute the beginning and end of each ranks stripe 
 	int begin = (myRank < remainder) ? (stripe * myRank + myRank) : (stripe * myRank + remainder); 
 	int end = begin + stripe + ((myRank < remainder) ? 1 : 0) - 1; 
 
@@ -80,10 +81,10 @@ public class Heat2D_mpi {
 		// to prevent deadlocks, we will make sure all even ranks first send   
 		// and then recieve all odd ranks will first receive and then send
 
-		// i am an even rank 
 		int slice_size = (end - begin) * size;
 		int slice_width = (end - begin);
 
+		// i am an even rank
 		if (myRank % 2 == 0) {
 			// Compute the size of the slice.
 			//System.out.println("slice_size=" + slice_size + ", slice_width=" + slice_width);
@@ -135,7 +136,6 @@ public class Heat2D_mpi {
 			}
 		}		
 	
-
 		// display intermediate results
 		//System.out.println("rank = " + myRank + ", Displaying Results v2");
 
@@ -165,18 +165,17 @@ public class Heat2D_mpi {
 	
 	} // end of simulation
 	
-
 	// finish the timer
 	Date endTime = new Date( );
 
+	// added in otherwise the printing of Elapsed time 
+	// messes up how the output looks 
 	try {
-    Thread.sleep(3000);
+    Thread.sleep(1000);
 	} catch (InterruptedException e) {}
 
 	System.out.println( "Elapsed time = " + ( endTime.getTime( ) - startTime.getTime( ) ) );	
 	MPI.Finalize(); 
-	
+
     }
 }
-
-
