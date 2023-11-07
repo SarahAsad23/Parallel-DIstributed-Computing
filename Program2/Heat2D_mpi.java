@@ -59,37 +59,23 @@ public class Heat2D_mpi {
 	for ( int t = 0; t < max_time; t++ ) {
 	    int p = t % 2; // p = 0 or 1: indicates the phase
 
-
 	    // two left-most and two right-most columns are identical
-		// Only do it if the myRank is zero and you should be working on this slice.
-		if (begin == 0) {
-			for ( int y = 0; y < size; y++ ) {
-				z[index(p, 0, y, size)] = z[index(p, 1, y, size)];
-			}
-		}
-
-		if (begin <= (size - 2) && end <= size) {
-			for ( int y = 0; y < size; y++ ) {
-				z[index(p, size - 1, y, size)] = z[index(p, size - 2, y, size)];
-			}
-		}
-
+	    for ( int y = 0; y < size; y++ ) {
+			z[index(p, 0, y, size)] = z[index(p, 1, y, size)];
+			z[index(p, size - 1, y, size)] = z[index(p, size - 2, y, size)];
+	    }
+	    
 	    // two upper and lower rows are identical
-		// Only do it for the part of the row that this slice should operate on.
-	    for ( int x = begin; x < end; x++ ) {
+	    for ( int x = 0; x < size; x++ ) {
 			z[index(p, x, 0, size)] = z[index(p, x, 1, size)];
 			z[index(p, x, size - 1, size)] = z[index(p, x, size - 2, size)];
 	    }
-
+	    
 	    // keep heating the bottom until t < heat_time
-		// Only do it for the assigned slice.
 	    if ( t < heat_time ) {
-			int startX = Math.max(size / 3, begin);
-			int endX = Math.min(2 * size / 3, end);
-			for ( int x = startX; x < endX; x++ ) {
-				z[index(p, x, 0, size)] = 19.0; // heat
-			}
-		}
+			for ( int x = size /3; x < size / 3 * 2; x++ )
+			z[index(p, x, 0, size)] = 19.0; // heat
+	    }
 
 		// to prevent deadlocks, we will make sure all even ranks first send   
 		// and then recieve all odd ranks will first receive and then send
@@ -168,7 +154,8 @@ public class Heat2D_mpi {
 
 		// Calculate Eulers equation for local stripe 
 		int p2 = (p + 1) % 2;
-		for(int x = begin + 1; x < end - 1; x++){
+		for(int x = begin; x <= end; x++){
+			if(x == 0 || x == size - 1) continue; 
 			for(int y = 1; y < size - 1; y++){
 				z[index(p2, x, y, size)] = z[index(p, x, y, size)] + 
 				r * ( z[index(p, x + 1, y, size)] - 2 * z[index(p, x, y, size)] + z[index(p, x - 1, y, size)] ) +
@@ -188,6 +175,7 @@ public class Heat2D_mpi {
 
 	System.out.println( "Elapsed time = " + ( endTime.getTime( ) - startTime.getTime( ) ) );	
 	MPI.Finalize(); 
+	
     }
 }
 
