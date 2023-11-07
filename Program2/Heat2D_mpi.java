@@ -81,33 +81,29 @@ public class Heat2D_mpi {
 		// to prevent deadlocks, we will make sure all even ranks first send   
 		// and then recieve all odd ranks will first receive and then send
 
-		int slice_size = (end - begin) * size;
+		int column_size = size;
 		int slice_width = (end - begin);
+
+		// Exchange Boundary data.
 
 		// i am an even rank
 		if (myRank % 2 == 0) {
-			// Compute the size of the slice.
-			//System.out.println("slice_size=" + slice_size + ", slice_width=" + slice_width);
-
-			// Sending to the worker on the left (if not the first one).
 			if (myRank > 0) {
-				//display(myRank, "Send", myRank - 1);
-				MPI.COMM_WORLD.Send(z, index(p, begin, 0, size), slice_size, MPI.DOUBLE, myRank - 1, 0);
+				// Sending to the worker on the left (if not the first one).
+				MPI.COMM_WORLD.Send(z, index(p, begin, 0, size), column_size, MPI.DOUBLE, myRank - 1, 0);
 			}
 
 			if (myRank < mpiSize - 1) {
 				// Sending to the worker on the right (if not the last one).
-				//display(myRank, "Send", myRank + 1);
-				MPI.COMM_WORLD.Send(z, index(p, begin, 0, size), slice_size, MPI.DOUBLE, myRank + 1, 0);
+				MPI.COMM_WORLD.Send(z, index(p, end - 1, 0, size), column_size, MPI.DOUBLE, myRank + 1, 0);
 
 				// Receive from right (if not the last one.)
-				//display(myRank, "Recv", myRank + 1);
-				MPI.COMM_WORLD.Recv(z, index(p, end + 1, 0, size), slice_size, MPI.DOUBLE, myRank + 1, 0);
+				MPI.COMM_WORLD.Recv(z, index(p, end, 0, size), column_size, MPI.DOUBLE, myRank + 1, 0);
 			}
 
 			if (myRank > 0) {
-				//display(myRank, "Recv", myRank - 1);
-				MPI.COMM_WORLD.Recv(z, index(p, begin - slice_width, 0, size), slice_size, MPI.DOUBLE, myRank - 1, 0);
+				// Receive from left.
+				MPI.COMM_WORLD.Recv(z, index(p, begin - 1, 0, size), column_size, MPI.DOUBLE, myRank - 1, 0);
 			}
 		}
 		// i am an odd rank
@@ -115,32 +111,32 @@ public class Heat2D_mpi {
 
 			if (myRank < mpiSize - 1) {
 				// Receive from the worker on the right.
-				//display(myRank, "Recv", myRank + 1);
-				MPI.COMM_WORLD.Recv(z, index(p, end + 1, 0, size), slice_size, MPI.DOUBLE, myRank + 1, 0);
+				MPI.COMM_WORLD.Recv(z, index(p, end, 0, size), column_size, MPI.DOUBLE, myRank + 1, 0);
 			}
 
 			if (myRank > 0) {
 				// Recive from left.
-				//display(myRank, "Recv", myRank - 1);
-				MPI.COMM_WORLD.Recv(z, index(p, begin - slice_width, 0, size), slice_size, MPI.DOUBLE, myRank - 1, 0);
+				MPI.COMM_WORLD.Recv(z, index(p, begin - 1, 0, size), column_size, MPI.DOUBLE, myRank - 1, 0);
 
 				// Send to the left.
-				//display(myRank, "Send", myRank - 1);
-				MPI.COMM_WORLD.Send(z, index(p, begin, 0, size), slice_size, MPI.DOUBLE, myRank - 1, 0);
+				MPI.COMM_WORLD.Send(z, index(p, begin, 0, size), column_size, MPI.DOUBLE, myRank - 1, 0);
 			}
 
-			if (myRank < mpiSize - 2) {
+			if (myRank < mpiSize - 1) {
 				// Send to the right.
-				//display(myRank, "Send", myRank + 1);
-				MPI.COMM_WORLD.Send(z, index(p, begin, 0, size), slice_size, MPI.DOUBLE, myRank + 1, 0);
+				MPI.COMM_WORLD.Send(z, index(p, end - 1, 0, size), column_size, MPI.DOUBLE, myRank + 1, 0);
 			}
 		}		
 	
 		// display intermediate results
-		//System.out.println("rank = " + myRank + ", Displaying Results v2");
+		int slice_size = (end - begin) * size;
 
-		// display intermediate results
 		if(myRank == 0){
+			// Receive slices from everyone else.
+			for (int x = slice_width, rank = 1; rank < 4; x += slice_width, rank++) {
+				MPI.COMM_WORLD.Recv(z, index(p, x, 0, size), slice_size, MPI.DOUBLE, rank, 0);
+			}
+			
 			if ( interval != 0 && ( t % interval == 0 || t == max_time - 1 ) ) {
 				System.out.println( "time = " + t );
 				for ( int y = 0; y < size; y++ ) {
@@ -150,6 +146,9 @@ public class Heat2D_mpi {
 				}
 				System.out.println( );
 			}
+		}
+		else {
+			MPI.COMM_WORLD.Send(z, index(p, begin, 0, size), slice_size, MPI.DOUBLE, 0, 0);
 		}
 
 		// Calculate Eulers equation for local stripe 
@@ -162,7 +161,6 @@ public class Heat2D_mpi {
 				r * ( z[index(p, x, y + 1, size)] - 2 * z[index(p, x, y, size)] + z[index(p, x, y - 1, size)] );
 			}
 		}
-	
 	} // end of simulation
 	
 	// finish the timer
@@ -175,6 +173,7 @@ public class Heat2D_mpi {
 	} catch (InterruptedException e) {}
 
 	System.out.println( "Elapsed time = " + ( endTime.getTime( ) - startTime.getTime( ) ) );	
+	System.out.println( "Done: " + myRank );	
 	MPI.Finalize(); 
 
     }
