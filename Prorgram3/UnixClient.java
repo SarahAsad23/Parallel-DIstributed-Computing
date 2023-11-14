@@ -17,7 +17,7 @@ public static void main (String args[]) {
         System.exit(-1); 
     }
 
-    String pOrC = args[0];                                             // P or C
+    char pOrC = args[0];                                               // P or C
     int port = Integer.parseInt(args[1]);                              // Port 
     int numServers = Integer.parseInt(args[2]);                        // Number of Servers 
     String[] serverList = Arrays.copyOfRange(args, 3, 3 + numServers); // List of Servers
@@ -41,12 +41,22 @@ public static void main (String args[]) {
         // then we want to call server execute function 
         // this is where the return value will be stored 
         Vector<String> returnValue = new Vector<>(); 
+        for(String c : commands){
+            try {
+                returnValue = server.execute(c);
+            } catch (Exception e) {}
+        }
 
-        try {
-            returnValue = server.execute();
-        } catch (Exception e) {}
+        if(pOrC == 'P'){
+            for(String t : returnValue){
+                System.out.println(t); 
+            }
+        }
+        else if(pOrC == 'C'){
+            System.out.println(returnValue.length); 
+        }
     }
-    
+
     //end the timer 
     Date endTime = new Date();
 
