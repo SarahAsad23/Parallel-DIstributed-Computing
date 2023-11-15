@@ -27,7 +27,7 @@ public class UnixClient{
             3 + numServers + 1 + numCommands);                              // List of Commands 
         
         
-        /* Testing to make sure we are picking up correct args
+        /* Test to make sure we are picking up correct args
         System.out.println(pOrC); 
         System.out.println(String.valueOf(port));
         System.out.println(String.valueOf(numServers));
@@ -37,8 +37,7 @@ public class UnixClient{
         System.out.println(String.valueOf(numCommands)); 
         for(String s : commands){   
             System.out.println(s); 
-        }
-        */
+        }*/
      
         //start the timer 
         Date startTime = new Date();
@@ -46,11 +45,12 @@ public class UnixClient{
         // this is where the return value will be stored
         Vector<String> returnValue = new Vector<String>();
 
+        ServerInterface server = null;
+
         for(String s : serverList){
             try{
                 //look for the server instance client wants to access
-                ServerInterface server = (ServerInterface) 
-                Naming.lookup("rmi://" + s + ":" + port + "/UnixServer");
+                server = (ServerInterface) Naming.lookup("rmi://" + s + ":" + port + "/unixserver");
             } catch (Exception e){
                 e.printStackTrace(); 
                 System.exit(-1); 
