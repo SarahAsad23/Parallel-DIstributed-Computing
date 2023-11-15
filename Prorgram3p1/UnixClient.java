@@ -14,7 +14,8 @@ public class UnixClient{
         
         // Should have at least 6 arguments 
         if(args.length < 6){
-            System.out.println("Usage: java UnixClient P/C port NumberOfServers ListOfServers NumberOfUnixCommands ListOfUnixCommands");
+            System.out.println("Usage: java UnixClient P/C port 
+            NumberOfServers ListOfServers NumberOfUnixCommands ListOfUnixCommands");
             System.exit(-1); 
         }
 
@@ -24,22 +25,9 @@ public class UnixClient{
         String[] serverList = Arrays.copyOfRange(args, 3, 3 + numServers);  // List of Servers
         int numCommands = Integer.parseInt(args[3 + numServers]);           // Number of Commands 
         String[] commands = Arrays.copyOfRange(args, 3 + numServers + 1, 
-            3 + numServers + 1 + numCommands);                              // List of Commands 
-        
-        
-        /* Test to make sure we are picking up correct args
-        System.out.println(pOrC); 
-        System.out.println(String.valueOf(port));
-        System.out.println(String.valueOf(numServers));
-        for(String s : serverList){
-            System.out.println(s); 
-        }
-        System.out.println(String.valueOf(numCommands)); 
-        for(String s : commands){   
-            System.out.println(s); 
-        }*/
+            3 + numServers + 1 + numCommands);                              // List of Commands
      
-        //start the timer 
+        // start the timer 
         Date startTime = new Date();
 
         // this is where the return value will be stored
@@ -49,35 +37,39 @@ public class UnixClient{
 
         for(String s : serverList){
             try{
-                //look for the server instance client wants to access
+                // look for the server instance client wants to access
                 server = (ServerInterface) Naming.lookup("rmi://" + s + ":" + port + "/unixserver");
             } catch (Exception e){
                 e.printStackTrace(); 
                 System.exit(-1); 
             }
 
-            // then we want to call server execute function  
+            // iterate through commands and run at each server 
             for(String c : commands){
                 try {
+                    System.out.println(s + " command: " + c); 
+                    
+                    // call server execute function
                     returnValue = server.execute(c);
-                } catch (Exception e) {}
-            }
 
-             //print results 
-            if(pOrC.equals("P")){
-                for(String t : returnValue){
-                    System.out.println(t); 
-                }
-            }
-            else if(pOrC.equals("C")){
-                System.out.println(returnValue.size()); 
+                    // print results 
+                    if(pOrC.equals("P")){
+                        for(String t : returnValue){
+                            System.out.println(t); 
+                        }
+                    }
+                    else if(pOrC.equals("C")){
+                        System.out.println(returnValue.size()); 
+                    }
+
+               } catch (Exception e) {}
             }
         }
 
-        //end the timer 
+        // end the timer 
         Date endTime = new Date();
 
-        //print elapsed time 
+        // print elapsed time 
         System.out.println( "Elapsed time = " + ( endTime.getTime() - startTime.getTime()));
     }
 }
