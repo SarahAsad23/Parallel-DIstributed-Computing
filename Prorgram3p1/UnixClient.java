@@ -49,21 +49,21 @@ public class UnixClient{
         for(String s : serverList){
             try{
                 //look for the server instance client wants to access
-                ServerInterface server = (ServerInterface) Naming.lookup("rmi://" + s + ":" + port + "/UnixServer");
+                ServerInterface server = (ServerInterface) 
+                Naming.lookup("rmi://" + s + ":" + port + "/UnixServer");
             } catch (Exception e){
                 e.printStackTrace(); 
                 System.exit(-1); 
             }
 
-            
             // then we want to call server execute function  
-            
             for(String c : commands){
                 try {
                     returnValue = server.execute(c);
                 } catch (Exception e) {}
             }
 
+             //print results 
             if(pOrC.equals("P")){
                 for(String t : returnValue){
                     System.out.println(t); 
@@ -72,13 +72,12 @@ public class UnixClient{
             else if(pOrC.equals("C")){
                 System.out.println(returnValue.size()); 
             }
-            
         }
 
         //end the timer 
         Date endTime = new Date();
 
-        //print results
+        //print elapsed time 
         System.out.println( "Elapsed time = " + ( endTime.getTime() - startTime.getTime()));
     }
 }
