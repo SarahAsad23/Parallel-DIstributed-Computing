@@ -16,22 +16,16 @@ public class MyAgent extends UWAgent implements Serializable {
 
     public void init( ) {
         System.out.println( "I'll hop to " + destination );
-        String[] args = new String[1];
-        args[0] = "hello";
         System.out.print("hop"); 
-        hop( "cssmpi2h", "step", args );
+        hop( "cssmpi2h", "step", null );
     }
 
     public void step(){
         System.out.print("step"); 
-        hop( "cssmpi3h", "jump", args );
+        hop( "cssmpi3h", "jump", null );
     }
 
     public void jump(){
         System.out.print("jump");
-    }
-
-    public void func( String[] args ) {
-	    System.out.println( args[0] );
     }
 }
