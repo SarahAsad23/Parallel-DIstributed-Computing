@@ -25,6 +25,10 @@ public class UnixAgent extends UWAgent implements Serializable {
     String pOrC;
     String[] serverList;
     String[] commands;
+
+    // used to calculate elapsed time
+    Date startTime;
+    Date endTime;
     
     public UnixAgent( String[] args ) {
 	    
@@ -56,17 +60,12 @@ public class UnixAgent extends UWAgent implements Serializable {
         } catch(UnknownHostException e){}
 
         // start the timer
-        //Date startTime = new Date();
+        startTime = new Date();
 
         // hop to the first server in the list 
         System.out.println("I'll hop to " + serverList[0]);
         numHops++; 
         hop(serverList[0], "runCommands", commands);
-            
-        //end the timer 
-        //Date endTime = new Date();
-        // print elapsed time 
-        //System.out.println( "Elapsed time = " + ( endTime.getTime() - startTime.getTime()));
     }
 
     // print out the results
@@ -76,17 +75,18 @@ public class UnixAgent extends UWAgent implements Serializable {
         // print the contents of the array
         if(pOrC.equals("P")){
             for(String s : arr){
-                //System.out.println("I AM P");
                 System.out.println(s);
-                //System.out.println("i am done printing P");
             }
         }
         // print the size of the array 
         else if(pOrC.equals("C")){
-            //System.out.println("I AM C"); 
             System.out.println(arr.length);
-            //System.out.println("i am done printing C");
         }
+
+        //end the timer 
+        endTime = new Date();
+        // print elapsed time 
+        System.out.println( "Elapsed time = " + ( endTime.getTime() - startTime.getTime()));
     }
 
     // run the command on each server 
@@ -102,7 +102,6 @@ public class UnixAgent extends UWAgent implements Serializable {
                 InputStream input = process.getInputStream();
                 BufferedReader bufferedInput = new BufferedReader(new InputStreamReader(input));
                 while ((line = bufferedInput.readLine()) != null) {
-                    System.out.println(line); 
                     output.addElement(line);
                 }
             }
@@ -114,14 +113,14 @@ public class UnixAgent extends UWAgent implements Serializable {
 
         System.out.println("Server List Length: " + serverList.length + " NumHops: " + numHops); 
 
+        // there are still more servers that need to execute 
         if(numHops != serverList.length){
             System.out.println("I'll hop to " + serverList[numHops]); 
             numHops++;
             int index = numHops - 1; 
             hop(serverList[index], "runCommands", commands);
-            
-            
         }
+        // all servers have executed commands - hop back to origin and print results
         else if(numHops == serverList.length){
             System.out.println("I'll hop back to origin " + me);
             String[] outputArray = output.toArray(new String[output.size()]);
