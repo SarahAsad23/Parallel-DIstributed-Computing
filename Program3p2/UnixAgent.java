@@ -34,7 +34,8 @@ public class UnixAgent extends UWAgent implements Serializable {
 	    
         // Should have at least 6 arguments 
         if(args.length < 5){
-            System.out.println("Usage: java UnixClient P/C port NumberOfServers ListOfServers NumberOfUnixCommands ListOfUnixCommands");
+            System.out.println("Usage: java UnixClient P/C port 
+            NumberOfServers ListOfServers NumberOfUnixCommands ListOfUnixCommands");
             System.exit(-1); 
         }
 
