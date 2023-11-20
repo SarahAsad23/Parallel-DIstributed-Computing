@@ -41,16 +41,6 @@ public class UnixAgent extends UWAgent implements Serializable {
             2 + numServers + 1 + numCommands);
     
         System.out.println( "Injected" );
-
-        System.out.println(pOrC);
-        System.out.println(numServers);
-        for(String s: serverList){
-            System.out.println(s);
-        }
-        System.out.println(numCommands);
-        for(String s : commands){
-            System.out.println(s);
-        }
 	}
 
     public void init(){
@@ -76,12 +66,12 @@ public class UnixAgent extends UWAgent implements Serializable {
             numHops++;
         }
 
-        if(numHops == serverList.length){
+         if(numHops == serverList.length){
             String[] outputArray = output.toArray(new String[output.size()]);
             hop(me, "printOut", outputArray);
         }
 
-        // end the timer 
+        //end the timer 
         Date endTime = new Date();
         // print elapsed time 
         System.out.println( "Elapsed time = " + ( endTime.getTime() - startTime.getTime()));
