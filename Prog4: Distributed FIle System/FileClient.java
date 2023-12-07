@@ -13,11 +13,9 @@ public class FileClient extends UnicastRemoteObject
     implements ClientInterface {
 
     private BufferedReader input = null;    // standard input
-    private final static String ramDiskFile // a cached file in /tmp: CHANGE!!
-	= "/tmp/mfukuda.txt";
+    private final static String ramDiskFile = "/tmp/sasad23.txt"; // a cached file in /tmp: 
     private ServerInterface server = null;  // a DFS server interface
     private File file = null;               // a cached file in memory
-
     private boolean emacs_option = false;   // invoke emacs if true, otherwise vim
 
     /** 
@@ -27,27 +25,24 @@ public class FileClient extends UnicastRemoteObject
      * @param machinename the server's ip name
      * @param port        the server's port
      */
-    public FileClient( String machinename, String port, boolean emacs_option ) 
-	throws RemoteException {
+    public FileClient( String machinename, String port, boolean emacs_option ) throws RemoteException {
 
-	// server search
-	try {
-	    server = ( ServerInterface )Naming.lookup( "rmi://" + machinename +
-						       ":" + port + 
-						       "/fileserver" );
-	} catch ( Exception e ) {
-	    e.printStackTrace( );
+		// server search
+		try {
+			server = ( ServerInterface )Naming.lookup( "rmi://" + machinename + ":" + port + "/fileserver" );
+		} catch ( Exception e ) {
+			e.printStackTrace( );
+		}
+
+		// file cache creation;
+		file = new File( );
+
+		// Standard input
+		input = new BufferedReader( new InputStreamReader( System.in ) );
+
+		// Enable emacs or not. If not, vim is invoked
+		this.emacs_option = emacs_option;
 	}
-
-	// file cache creation;
-	file = new File( );
-
-	// Standard input
-	input = new BufferedReader( new InputStreamReader( System.in ) );
-
-	// Enable emacs or not. If not, vim is invoked
-	this.emacs_option = emacs_option;
-    }
 
     /**
      * Is the main loop where the client program reads a file name and its
@@ -70,30 +65,30 @@ public class FileClient extends UnicastRemoteObject
 	    String filename = null;
 	    String mode = null;
 	    try {
-		System.out.println( "FileClient: Next file to open:" );
-		System.out.print( "\tFile name: " );
-		filename = input.readLine( );
-		if ( filename.equals( "quit" ) || filename.equals( "exit" ) ) {
-		    if ( file.isStateWriteOwned( ) )
-			file.upload( );
-		    System.exit( 0 );
-		} else if ( filename.equals( "" ) ) {
-		    System.err.println( "Do it again" );
-		    writebackThread.kill( );
-		    continue;
-		}
+			System.out.println( "FileClient: Next file to open:" );
+			System.out.print( "\tFile name: " );
+			filename = input.readLine( );
+			if ( filename.equals( "quit" ) || filename.equals( "exit" ) ) {
+				if ( file.isStateWriteOwned( ) )
+				file.upload( );
+				System.exit( 0 );
+			} else if ( filename.equals( "" ) ) {
+				System.err.println( "Do it again" );
+				writebackThread.kill( );
+				continue;
+			}
 		
-		System.out.print( "\tHow(r/w): " );
-		mode = input.readLine( );
-		if ( !mode.equals( "r" ) && !mode.equals( "w" ) ) {
-		    System.err.println( "Do it again" );
-		    writebackThread.kill( );
-		    continue;
-		}
+			System.out.print( "\tHow(r/w): " );
+			mode = input.readLine( );
+			if ( !mode.equals( "r" ) && !mode.equals( "w" ) ) {
+				System.err.println( "Do it again" );
+				writebackThread.kill( );
+				continue;
+			}
 		     
-	    } catch ( IOException e ) {
-		e.printStackTrace( );
-	    }
+			} catch ( IOException e ) {
+			e.printStackTrace( );
+		}
 
 	    // Now, the main thread manipulates the cached file. It terminates
 	    // the background thread that takes care of uploading the cached
@@ -103,19 +98,20 @@ public class FileClient extends UnicastRemoteObject
 	    // look through the cache
 	    if ( file.hit( filename, mode ) != true ) {
 		// cache miss
-		if ( file.isStateWriteOwned( ) ) {
-		    // replacement
-		    file.upload( );
-		}
-		// download a file from the server
-		if ( file.download( filename, mode ) == false ) {
-		    System.out.println( "File downloaded failed" );
-		    continue;
-		}
+			if ( file.isStateWriteOwned( ) ) {
+				// replacement
+				file.upload( );
+			}
+			// download a file from the server
+			if ( file.download( filename, mode ) == false ) {
+				System.out.println( "File downloaded failed" );
+				continue;
+			}
 	    }
 	    // open an editor
 	    file.launchEditor( mode );
-	}
+		
+		}
     }
 
     /**
@@ -125,7 +121,7 @@ public class FileClient extends UnicastRemoteObject
      * @return true if invalidation takes place in success
      */
     public boolean invalidate( ) {
-	return file.invalidate( );
+		return file.invalidate( );
     }
 
     /**
@@ -135,7 +131,7 @@ public class FileClient extends UnicastRemoteObject
      * @return true if writeback is scheduled in success
      */
     public boolean writeback( ) {
-	return file.writeback( );
+		return file.writeback( );
     }
 
     /**
@@ -149,31 +145,26 @@ public class FileClient extends UnicastRemoteObject
      *             for editing a file. Otherwise, vim is invoked.
      */
     public static void main( String[] args ) {
-	// checking arguments
-	if ( args.length != 2 && args.length != 3 ) {
-	    System.err.println( "usage: java FileClient server_ip port# [e]" );
-	    System.exit( -1 );
-	}
+		// checking arguments
+		if ( args.length != 2 && args.length != 3 ) {
+			System.err.println( "usage: java FileClient server_ip port# [e]" );
+			System.exit( -1 );
+		}
 
-	try {
-	    // create a client object
-	    FileClient client 
-		= new FileClient( args[0], args[1], 
-				  ( args.length == 3 && args[2].equals( "e" ) )
-				  );
-	    // registering myself
-	    startRegistry( Integer.parseInt( args[1] ) );
-	    Naming.rebind( "rmi://localhost:" + args[1] + "/fileclient", 
-			   client );
-	    System.out.println( "rmi://localhost: " + args[1] + "/fileclient" +
-				" invokded" );
+		try {
+			// create a client object
+			FileClient client = new FileClient(args[0], args[1], (args.length == 3 && args[2].equals("e")));
+			// registering myself
+			startRegistry(Integer.parseInt(args[1]));
+			Naming.rebind("rmi://localhost:" + args[1] + "/fileclient", client);
+			System.out.println("rmi://localhost: " + args[1] + "/fileclient" + " invokded");
 
-	    // goes into the main loop of file operations
-	    client.loop( );
-	} catch ( Exception e ) {
-	    e.printStackTrace( );
-	    System.exit( 1 );
-	}
+			// goes into the main loop of file operations
+			client.loop( );
+		} catch ( Exception e ) {
+			e.printStackTrace( );
+			System.exit( 1 );
+		}
     }
 
     /**
@@ -198,35 +189,35 @@ public class FileClient extends UnicastRemoteObject
      * server in response to its writeback request.
      */
     private class WritebackThread extends Thread {
-	private boolean active = false;  // reset when the main thread kills me
+		private boolean active = false;  // reset when the main thread kills me
 
-	public WritebackThread( ) {      // the constructor simply sets the
-	    active = true;               // active variable 
-	}
+		public WritebackThread( ) {      // the constructor simply sets the
+			active = true;               // active variable 
+		}
 
-	// If the DFS server calls writeback( ) that changes the file state to
-	// state_back2readshared, I will write back the cached file to the 
-	// server.
-	public void run( ) {
-	    while ( isActive( ) ) {
-		if ( file.isStateBackToReadShared( ) )
-		    file.upload( );
-	    }
-	}
-	// This function is called by the main thread when it is about to
-	// manipulate the cached file with emacs/vim. I must be terminated.
-	synchronized void kill ( ) {
-	    active = false;
-	    try {
-		this.join( );
-	    } catch ( InterruptedException e ) {
-		e.printStackTrace( );
-	    }
-	}
-	// Is called by run( ) to check if I can be still alive.
-	synchronized boolean isActive( ) {
-	    return active;
-	}
+		// If the DFS server calls writeback( ) that changes the file state to
+		// state_back2readshared, I will write back the cached file to the 
+		// server.
+		public void run( ) {
+			while ( isActive( ) ) {
+			if ( file.isStateBackToReadShared( ) )
+				file.upload( );
+			}
+		}
+		// This function is called by the main thread when it is about to
+		// manipulate the cached file with emacs/vim. I must be terminated.
+		synchronized void kill ( ) {
+			active = false;
+			try {
+			this.join( );
+			} catch ( InterruptedException e ) {
+			e.printStackTrace( );
+			}
+		}
+		// Is called by run( ) to check if I can be still alive.
+		synchronized boolean isActive( ) {
+			return active;
+		}
     }
 
     /**
@@ -256,6 +247,7 @@ public class FileClient extends UnicastRemoteObject
 		e.printStackTrace( );
 	    }
 	}
+
 	public synchronized boolean isStateInvalid( ) {
 	    return ( state == state_invalid );
 	}
@@ -345,18 +337,18 @@ public class FileClient extends UnicastRemoteObject
 	    // state transition
 	    synchronized( this ) {
 		switch( state ) {
-		case state_invalid:
-		    if ( mode.equals( "r" ) )
-			state = state_readshared;
-		    else if ( mode.equals( "w" ) ) {
-			state = state_writeowned;
-		    }
-		    break;
-		case state_readshared:
-		    if ( mode.equals( "w" ) )
-			 state = state_writeowned;
-		    break;
-		}
+			case state_invalid:
+				if ( mode.equals( "r" ) )
+				state = state_readshared;
+				else if ( mode.equals( "w" ) ) {
+				state = state_writeowned;
+				}
+				break;
+			case state_readshared:
+				if ( mode.equals( "w" ) )
+				state = state_writeowned;
+				break;
+			}
 	    }
 
 	    // download file contents from the server
@@ -386,23 +378,24 @@ public class FileClient extends UnicastRemoteObject
 	    // state transition
 	    synchronized( this ) {
 		switch( state ) {
-		case state_writeowned: 
-		    state = state_invalid;
-		    break;
-		case state_back2readshared:
-		    state = state_readshared;
-		    break;
-		}
+			case state_writeowned: 
+				state = state_invalid;
+				break;
+			case state_back2readshared:
+				state = state_readshared;
+				break;
+			}
 	    }
 
 	    // upload file contents to the server
 	    FileContents contents = new FileContents( bytes );
 	    try {
-		server.upload( myIpName, name, contents );
+			server.upload( myIpName, name, contents );
 	    } catch ( RemoteException e ) {
-		e.printStackTrace( );
-		return false;
+			e.printStackTrace( );
+			return false;
 	    }
+
 	    System.out.println( "uploading: " + name + " completed" );
 	    return true;
 	}
@@ -427,22 +420,21 @@ public class FileClient extends UnicastRemoteObject
 	    if ( !arg2.equals( "" ) ) 
 		cmdarray[2] = arg2;
 	    try {
-		// Process builder with inherited IO should allow a console
-		// based editor to take over the terminal.
-		ProcessBuilder pb = new ProcessBuilder();
-		pb.command( cmdarray );
-		pb.redirectInput( ProcessBuilder.Redirect.INHERIT );
-		pb.redirectOutput( ProcessBuilder.Redirect.INHERIT );
-		pb.redirectError( ProcessBuilder.Redirect.INHERIT) ;
-		pb.start( ).waitFor( );   // invoke a Unix cmd and wait for it
-
+			// Process builder with inherited IO should allow a console
+			// based editor to take over the terminal.
+			ProcessBuilder pb = new ProcessBuilder();
+			pb.command( cmdarray );
+			pb.redirectInput( ProcessBuilder.Redirect.INHERIT );
+			pb.redirectOutput( ProcessBuilder.Redirect.INHERIT );
+			pb.redirectError( ProcessBuilder.Redirect.INHERIT) ;
+			pb.start( ).waitFor( );   // invoke a Unix cmd and wait for it
 
 	    } catch ( IOException e ) {
-		e.printStackTrace( );
-		return false;
+			e.printStackTrace( );
+			return false;
 	    } catch ( InterruptedException e ) {
-		e.printStackTrace( );
-		return false;
+			e.printStackTrace( );
+			return false;
 	    }
 	    return true;
 	}
@@ -463,46 +455,46 @@ public class FileClient extends UnicastRemoteObject
 
 	    // write the cached file contents to ramDiskFile /tmp/mfukuda.txt
 	    try {
-		FileOutputStream file = new FileOutputStream( ramDiskFile );
-		file.write( bytes );
-		file.flush( );
-		file.close( );
+			FileOutputStream file = new FileOutputStream( ramDiskFile );
+			file.write( bytes );
+			file.flush( );
+			file.close( );
 	    } catch ( FileNotFoundException e ) {
-		e.printStackTrace( );
-		return false;
+			e.printStackTrace( );
+			return false;
 	    } catch ( IOException e ) {
-		e.printStackTrace( );
+			e.printStackTrace( );
 		return false;
 	    } 
 
 	    // chmod 400 or 600
-	    if ( execUnixCommand( "chmod", mode.equals( "r" ) ? "400" : "600",
-				  ramDiskFile ) == false )
+	    if ( execUnixCommand( "chmod", mode.equals( "r" ) ? "400" : "600", ramDiskFile ) == false )
 		return false;
 
 	    // launch emacs or vim
 	    boolean execCode = false;
 	    if ( emacs_option )
-		execCode = execUnixCommand( "emacs", ramDiskFile, "" );
+			execCode = execUnixCommand( "emacs", ramDiskFile, "" );
 	    else
-		execCode = execUnixCommand( "vim", ramDiskFile, "" );
+			execCode = execUnixCommand( "vim", ramDiskFile, "" );
 
 	    // read the updated file contents from ramDiskFile if "w" mode
 	    if ( execCode == true && mode.equals( "w" ) ) {
-		try {
-		    FileInputStream file = new FileInputStream( ramDiskFile );
-		    bytes = new byte[file.available( )];
-		    file.read( bytes );
-		    file.close( );
-		} catch ( FileNotFoundException e ) {
-		    e.printStackTrace( );
-		    return false;
-		} catch ( IOException e ) {
-		    e.printStackTrace( );
-		    return false;
-		} 
+			try {
+				FileInputStream file = new FileInputStream( ramDiskFile );
+				bytes = new byte[file.available( )];
+				file.read( bytes );
+				file.close( );
+			} catch ( FileNotFoundException e ) {
+				e.printStackTrace( );
+				return false;
+			} catch ( IOException e ) {
+				e.printStackTrace( );
+				return false;
+			} 
 	    }
 	    return true;
-	}
+
+		}
     }
 }
