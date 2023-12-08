@@ -6,9 +6,7 @@ import java.rmi.registry.*;        // rmiregistry
 
 public class FileServer extends UnicastRemoteObject implements ServerInterface {
 
-    // server maintains a list of cached entries 
-    // cache is null when server is started
-    private Vector<CachedFileEntry> cache; 
+    private Vector<CachedFileEntry> cache; // vector of cached entire - null when server started
     private ClientInterface clientFace = null;  // a DFS client interface
     int port; 
 
@@ -43,15 +41,14 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
 
         try{
             // create a server object 
-            FileServer server = new FileServer(); // FIX THIS
+            FileServer server = new FileServer(); 
+            port = Integer.parseInt(args[0]);
             // start the registry 
-
-            port = Integer.parseInt(args[0]); 
             startRegistry(port);
 	        Naming.rebind("rmi://localhost:" + port + "/fileserver", server);
         } catch(Exception e){
-            e.printStackTrace( );
-            System.exit( 1 );
+            e.printStackTrace();
+            System.exit(1);
 	    }
 
         System.out.println("Connected");
@@ -159,10 +156,6 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
                             catch(Exception e){
                                 e.printStackTrace(); 
                             }
-
-                            // DO I UPDATE THE CONTENTS IN SERVERS CACHE? 
-
-                            cache[i].setContents(contents); 
                         }
 
                         return contents; 
@@ -189,19 +182,18 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
 
     public boolean upload( String client, String filename, FileContents contents ) throws RemoteException{
         for(int i = 0; i < cache.size(); i++){
-            // if we have foung the file in the servers cache
+            // if we have found the file in the servers cache
             if(cache[i].getName().equalsIgnoreCase(filename)){
-                if((cache[i].getState().equalsIgnoreCase("Ovnership_Change")) 
+                // and the file state is Ownership_Change OR Write_Shared
+                if((cache[i].getState().equalsIgnoreCase("Ownership_Change")) 
                 || (cache[i].getState().equalsIgnoreCase("Write_Shared"))){
-
-                    //first we need to convert to a byte array
-                    // DO THIS 
 
                     //update the file contents
                     cache[i].setContents(contents.get()); 
 
-                    //loop through the readers array of this file and invalidate for each reader
+                    // get the readers list 
                     Vector<String> readers = cache[i].getReaders();
+                    // loop through the readers of this file and invalidate for each reader/client
                     for (String reader : readers) {
                         try{
                             clientFace = (ClientInterface)Naming.lookup( "rmi://" + reader + ":" + port + "/fileclient" );
@@ -222,7 +214,7 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
     }
 }
 
-class CachedFileEntry {
+private class CachedFileEntry {
 
     private String name; // a cached file name 
     // list of IP names each identifying a different 
@@ -255,8 +247,6 @@ class CachedFileEntry {
     public void setOwner(String owner) { this.owner = owner; }
     public void setState(String state) { this.state = state; }
     public void setContents(byte[] contents) { this.contents = contents; }
-
-
 
     public void addReaders(String clinet){ 
         if(!this.reader.equals(client)){
