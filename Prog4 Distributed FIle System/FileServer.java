@@ -111,17 +111,18 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
                 } else if (mode.equals("w")) { // write
                     System.out.println("Write_shared being accessed in w");
                     // file state goes to Ownership_Change
-                    file.setState("Ownership_Change");
+                    file.setState("Ownership_Change"); 
             
                     // Step 1: Reset the last Upload Client.
                     file.resetLastUploadClient();
             
                     // Step 2: Call WriteBack on the client.
                     requestWriteBack(file.getOwner());
-                    System.out.println("Writeback() has been called5555");
+                    System.out.println("Writeback() has been called");
             
                     // Step 3: Wait for the upload to complete.
                     file.waitForUploadClient();
+                    file.setOwner(client);
             
                     return new FileContents(file.contents);
                 } else {
@@ -136,8 +137,10 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
                     // add client to readers list
                     file.addReaders(client);
                 } else if (mode.equals("w")) {
-                    System.out.println("Ownership_Change being accessed in w");
+                    System.out.println("Ownership_Change being accessed in w, waiting for Write_Shared state");
+                    
                     // COME BACK AND FIX
+                    file.waitForState("Write_Shared");
                 }
             }
 
@@ -159,6 +162,13 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
             // and the file state is Ownership_Change OR Write_Shared
             if((file.getState().equalsIgnoreCase("Ownership_Change"))
                     || (file.getState().equalsIgnoreCase("Write_Shared"))){
+
+                if(file.getState().equalsIgnoreCase("Ownership_Change")){
+                    file.setState("Write_Shared");
+                }
+                else if(file.getState().equalsIgnoreCase("Write_Shared")){
+                    file.setState("Not_Shared"); 
+                }
 
                 //update the file contents
                 file.setContents(contents.get());
@@ -233,6 +243,24 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
         }
     }
 
+    private void writeFileToDirectory(){
+        var currentDirectory = Paths.get(System.getProperty("user.dir"));
+
+        for(int i = 0; i < cache.size(); i++){
+            String filename = cache.get(i).getName(); 
+            System.out.println("Filename " + filename);
+            var filePath = currentDirectory.resolve(Paths.get(filename));
+            System.out.println("FilePath: " + filePath); 
+            try(FileOutputStream fs = new FileOutputStream(filePath.toFile())){
+                fs.write(cache.get(i).getContents()); 
+                System.out.println("File " + filename + " written to the current directory successfully"); 
+
+            } catch(IOException e){
+                e.printStackTrace(); 
+            }
+        }
+    }
+
     /*
      * Starts an RMI registry in background, which relieves a user from
      * manually starting the registry and thus prevents them from
@@ -272,34 +300,36 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
 
             System.out.println("Starting Bind");
 	        Naming.rebind("rmi://localhost:" + port + "/fileserver", server);
-        } catch(Exception e){
+
+            System.out.println("Connected");
+
+            Scanner scan = new Scanner(System.in); 
+            String input = ""; 
+
+            // the server needs to be terminated using quit or exit
+            while(true){
+                // get the user input 
+                System.out.println("Enter 'Quit' or 'Exit' to Terminate the Server: "); 
+                input = scan.nextLine();
+
+                // if input is exit or quit
+                if(input.equalsIgnoreCase("exit") || input.equalsIgnoreCase("quit")){
+                    // before termination, server must write back all modified
+                    // file contents from its file cache to the local disk
+                    server.writeFileToDirectory();
+
+                    // exit 
+                    System.exit(0);
+                }
+                
+            }
+        } 
+        catch(Exception e){
             e.printStackTrace();
             System.exit(1);
-	    }
-
-        System.out.println("Connected");
-
-        Scanner scan = new Scanner(System.in); 
-        String input = ""; 
-
-        // the server needs to be terminated using quit or exit
-        while(true){
-            // get the user input 
-            System.out.println("Enter 'Quit' or 'Exit' to Terminate the Server: "); 
-            input = scan.nextLine();
-
-            // if input is exit or quit
-            if(input.equalsIgnoreCase("exit") || input.equalsIgnoreCase("quit")){
-                // before termination, server must write back all modified
-                // file contents from its file cache to the local disk
-
-
-                // exit 
-                System.exit(0);
-            }
-             
         }
     }
+
 
 
     private class CachedFileEntry {
@@ -336,9 +366,28 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
         // Setters
         public void setName(String name) { this.name = name; }
         public void setOwner(String owner) { this.owner = owner; }
-        public void setState(String state) { this.state = state; }
         public void setContents(byte[] contents) { this.contents = contents; }
-    
+
+        public void setState(String state) {
+            synchronized(this) { 
+                this.state = state; 
+                notifyAll();
+            }
+        }
+        
+        public void waitForState(String expectedState) {
+            try {
+                synchronized (this) {
+                    while (!this.state.equalsIgnoreCase(expectedState)) {
+                        System.out.printf("waitForState: CurrentState=%s\n", this.state);
+                        wait();
+                    }
+                }
+            }catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
         public void addReaders(String client){ 
             if(!this.readers.equals(client)){
                 this.readers.add(client); 
