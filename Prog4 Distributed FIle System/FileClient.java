@@ -131,6 +131,7 @@ public class FileClient extends UnicastRemoteObject
      * @return true if writeback is scheduled in success
      */
     public boolean writeback( ) {
+		System.out.println("writeback has been called ---------------------");
 		return file.writeback( );
     }
 
@@ -467,6 +468,7 @@ public class FileClient extends UnicastRemoteObject
 		return false;
 	    } 
 
+		
 	    // chmod 400 or 600
 	    if ( execUnixCommand( "chmod", mode.equals( "r" ) ? "400" : "600", ramDiskFile ) == false )
 		return false;
@@ -493,6 +495,7 @@ public class FileClient extends UnicastRemoteObject
 				return false;
 			} 
 	    }
+		
 	    return true;
 
 		}
