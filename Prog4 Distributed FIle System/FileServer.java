@@ -1,4 +1,5 @@
 import java.io.*;                  // IOException
+import java.util.*;
 import java.net.*;                 // InetAddress
 import java.rmi.*;                 // Naming
 import java.rmi.server.*;          // UnicastRemoteObject
@@ -6,9 +7,9 @@ import java.rmi.registry.*;        // rmiregistry
 
 public class FileServer extends UnicastRemoteObject implements ServerInterface {
 
-    private Vector<CachedFileEntry> cache; // vector of cached entire - null when server started
-    private ClientInterface clientFace = null;  // a DFS client interface
-    int port; 
+    private static Vector<CachedFileEntry> cache; // vector of cached entire - null when server started
+    private static ClientInterface clientFace = null;  // a DFS client interface
+    private static int port; 
 
     // CHANGE LOCATION 
     private final static String ramDiskFile = "/tmp/sasad23.txt"; // a cached file in /tmp: 
@@ -60,15 +61,17 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
         while(true){
             // get the user input 
             System.out.println("Enter 'Quit' or 'Exit' to Terminate the Server: "); 
-            input = scan.getNextLine();
+            input = scan.nextLine();
 
             // if input is exit or quit
             if(input.equalsIgnoreCase("exit") || input.equalsIgnoreCase("quit")){
                 // before termination, server must write back all modified
                 // file contents from its file cache to the local disk
-                // COME BACK AND FINISH  
+                for(CachedFileEntry f : cache){
+                    // write back file to disk 
+                    // COME BACK AND FINISH 
+                }
 
-                
                 // exit 
                 System.exit(0);
             }
@@ -76,23 +79,74 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
         }
     }
 
-    public FileContents download(String client, String filename, String mode) throws RemoteException{
 
-        FileContents f; 
-        
-        // scan the list of files 
-        for(int i = 0; i < cache.size(); i++){
+    private class CachedFileEntry {
+
+        private String name; // a cached file name 
+        // list of IP names each identifying a different 
+        // DFS client who is sharing this file for read
+        private Vector<String> readers; 
+        private String owner; // IP name of client who owns file for modification 
+        // indicates the state: Not_Shared, Read_Shared, Write_Shares, Ownership_Change
+        private String state; 
+        private byte[] contents; // stores the file contents
+    
+    
+        // construtor that creates a new file with the name, contents, ownder, readers, and state
+        public CachedFileEntry(String name, String owner, String state, byte[] contents){
+            this.name = name; 
+            this.readers = new Vector<>();
+            this.owner = owner; 
+            this.state = state; 
+            this.contents = contents; 
+        }
+    
+        // Getters
+        public String getName() { return name; }
+        public Vector<String> getReaders() { return readers; }
+        public String getOwner() { return owner; }
+        public String getState() { return state; }
+        public byte[] getContents() { return contents; }
+    
+        // Setters
+        public void setName(String name) { this.name = name; }
+        public void setOwner(String owner) { this.owner = owner; }
+        public void setState(String state) { this.state = state; }
+        public void setContents(byte[] contents) { this.contents = contents; }
+    
+        public void addReaders(String client){ 
+            if(!this.readers.equals(client)){
+                this.readers.add(client); 
+            }
+        }
+    
+        public CachedFileEntry findFile(String filename, Vector<CachedFileEntry> files){
+            for(int i = 0; i < files.size(); i++){
+                if(files.elementAt(i).getName().equals(filename)){
+                    return files.get(i);
+                }
+            }
+    
+            return null; 
+        }
+
+        public FileContents download(String client, String filename, String mode) throws RemoteException{
+
+            FileContents f; 
+            CachedFileEntry file = findFile(filename, cache); 
+            
+            
             // Downloading a new file to a client 
             // if the file does not exist, then cache it 
-            if(!cache[i].getName().equalsIgnoreCase(filename)){
+            if(file == null){
                 // SOMEHOW HAVE TO CHECK IF CONTENTS ARE ON DISK?
-
+    
                 // first create a cached file entry ******* COME BACK AND ADD CONTENTS *******
-                CachedFileEntry file = new CachedFileEntry(filename, client, "Not_Shared", contents); 
+                CachedFileEntry newFile = new CachedFileEntry(filename, client, "Not_Shared", contents); 
                 // add client to readers list 
-                cache[i].addReaders(client); 
+                file.addReaders(client); 
                 // then add the file to the cache 
-                files.add(file); 
+                cache.add(newFile); 
                 
                 // if mode is w then we return an empty file 
                 if(mode.equals("w")){
@@ -105,51 +159,51 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
             // Downloading a cached file to a client
             else{ // file is already cached at the server 
                 
-                if(cache[i].getState().equals("Not_Shared")){
+                if(file.getState().equals("Not_Shared")){
                     if(mode.equals("r")){ // read
                         // add this client to the readers list 
-                        cache[i].addReaders(client); 
+                        file.addReaders(client); 
                         // file state changed to Read_shared 
-                        cache[i].setState("Read_Shared"); 
+                        file.setState("Read_Shared"); 
                     }
                     else{ //write 
                         // register this client as the owner 
-                        cache[i].setOwner(client); 
+                        file.setOwner(client); 
                         // file state changed to Write_shared 
-                        cache[i].setState("Write_Shared");
+                        file.setState("Write_Shared");
                     }
                 }
-
-                else if(cache[i].getState().equals("Read_Shared")){
+    
+                else if(file.getState().equals("Read_Shared")){
                     if(mode.equals("r")){ // read 
                         // add this clients to readers list  
-                        cache[i].addReaders(client);
+                        file.addReaders(client);
                     }
                     else{ // write 
                         // register this client as the owner 
-                        cache[i].setOwner(client);
+                        file.setOwner(client);
                         // file state changed to Write_shared 
-                        cache[i].setState("Write_Shared");
+                        file.setState("Write_Shared");
                     }
                 }
                 
-                else if(cache[i].getState().equals("Write_Shared")){
+                else if(file.getState().equals("Write_Shared")){
                     if(mode.equals("r")){ // read 
                         // add client to readers list 
-                        cache[i].addReaders(client); 
+                        file.addReaders(client); 
                     }
                     else{ // write 
                         // file state goes to Ownership_Change 
-                        cache[i].setState("Ownership_Change"); 
-
+                        file.setState("Ownership_Change");  
+    
                         // server calls the current owners writeback fucntion
                         // server must suspend download() until the owners client 
                         // calls the servers upload() to write back the latest contents 
                         synchronized(client){
                             try{
                                 // make the RMI call to the clients writeback function 
-                                FileContents contents = clientFace.writeback();
-
+                                clientFace.writeback();
+    
                                 // wait until the client is done writing back contents 
                                 client.wait(); 
                             } 
@@ -157,42 +211,43 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
                                 e.printStackTrace(); 
                             }
                         }
-
+    
                         return contents; 
                     }
                 }
                 
-                else if(cache[i].getState().equals("Ownership_Change")){
+                else if(file.getState().equals("Ownership_Change")){
                     if(mode.equals("r")){ // read 
                         // add client to readers list 
-                        cache[i].addReaders(client); 
+                        file.addReaders(client); 
                     }
                     else{ // write 
                         // COME BACK AND FIX 
                     }
                 }
-
-                f = new FileContents(cache[i].getContents());
+    
+                f = new FileContents(file.getContents());
             }
+            
+            
+            // return file contents object to client 
+            return f; 
         }
-        
-        // return file contents object to client 
-        return f; 
-    }
 
-    public boolean upload( String client, String filename, FileContents contents ) throws RemoteException{
-        for(int i = 0; i < cache.size(); i++){
+        public boolean upload( String client, String filename, FileContents contents ) throws RemoteException{
+            CachedFileEntry file = findFile(filename, cache);
+    
             // if we have found the file in the servers cache
-            if(cache[i].getName().equalsIgnoreCase(filename)){
+            if(file != null){
                 // and the file state is Ownership_Change OR Write_Shared
-                if((cache[i].getState().equalsIgnoreCase("Ownership_Change")) 
-                || (cache[i].getState().equalsIgnoreCase("Write_Shared"))){
-
+                if((file.getState().equalsIgnoreCase("Ownership_Change")) 
+                || (file.getState().equalsIgnoreCase("Write_Shared"))){
+    
                     //update the file contents
-                    cache[i].setContents(contents.get()); 
-
+                    file.setContents(contents.get()); 
+    
                     // get the readers list 
-                    Vector<String> readers = cache[i].getReaders();
+                    Vector<String> readers = file.getReaders();
                     // loop through the readers of this file and invalidate for each reader/client
                     for (String reader : readers) {
                         try{
@@ -208,61 +263,10 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
                     return false; 
                 }
             }
-        }
-
-        return true; 
-    }
-}
-
-private class CachedFileEntry {
-
-    private String name; // a cached file name 
-    // list of IP names each identifying a different 
-    // DFS client who is sharing this file for read
-    private Vector<String> readers; 
-    private String owner; // IP name of client who owns file for modification 
-    // indicates the state: Not_Shared, Read_Shared, Write_Shares, Ownership_Change
-    private String state; 
-    private byte[] contents; // stores the file contents
-
-
-    // construtor that creates a new file with the name, contents, ownder, readers, and state
-    public CachedFileEntry(String name, String owner, String state, byte[] contents, ){
-        this.name = name; 
-        this.readers = new Vector<>();
-        this.owner = owner; 
-        this.state = state; 
-        this.contents = contents; 
-    }
-
-    // Getters
-    public String getName() { return name; }
-    public Vector<String> getReaders() { return readers; }
-    public String getOwner() { return owner; }
-    public String getState() { return state; }
-    public byte[] getContents() { return contents; }
-
-    // Setters
-    public void setName(String name) { this.name = name; }
-    public void setOwner(String owner) { this.owner = owner; }
-    public void setState(String state) { this.state = state; }
-    public void setContents(byte[] contents) { this.contents = contents; }
-
-    public void addReaders(String clinet){ 
-        if(!this.reader.equals(client)){
-            this.readers.add(client); 
+        
+            return true; 
         }
     }
 }
 
-public class FileContents implements Serializable { 
-    
-    private byte[] contents; // file contents 
-    
-    public FileContents( byte[] contents ) { this.contents = contents; }
-    public byte[] get() { return contents; }
-    
-    public void print() throws IOException{ 
-        System.out.println( "FileContents = " + contents );
-    } 
-}
+
