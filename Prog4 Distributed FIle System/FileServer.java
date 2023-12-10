@@ -1,53 +1,68 @@
-import jdk.jshell.spi.ExecutionControl;
+/*
+ * Sarah Asad 
+ * CSS 434: Parallel & Distributed Computing 
+ * 
+ * Prog 4: Distributed File System 
+ */
 
+import jdk.jshell.spi.ExecutionControl;
 import java.io.*;                  // IOException
-import java.nio.file.Files;
-import java.util.*;
+import java.nio.file.Files;        // Files
+import java.util.*;                // Vector
 import java.net.*;                 // InetAddress
 import java.rmi.*;                 // Naming
 import java.rmi.server.*;          // UnicastRemoteObject
 import java.rmi.registry.*;        // rmiregistry
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.Path;         // File path 
+import java.nio.file.Paths;        // Files path 
 
 public class FileServer extends UnicastRemoteObject implements ServerInterface {
 
     private final Vector<CachedFileEntry> cache; // vector of cached entire - null when server started
     private int port;
-
-    // CHANGE LOCATION 
-    private final static String ramDiskFile = "/tmp/sasad23.txt"; // a cached file in /tmp: 
-
+    
+    
+    // constructor which creates a FileServer object
     public FileServer(int port)throws RemoteException{
         this.cache = new Vector<>(); 
         this.port = port;
     }
 
-    public void shutdown()
-    {
-        System.out.println("Terminating");
-    }
-
+    /*
+     * Called by the client to download contents of a requested file. Download is handled differently
+     * based on the mode the client wants to download the file (r/w) as well as what the current file 
+     * state is (Not_Shared, Read_Shared, Write_Shared, Ownership_Chnage)
+     * 
+     * Parameters: client: the IP name of the client 
+     *             file name: the name of the file the client wants 
+     *             mode: the mode (read/write) the client wants to access the file
+     *  
+     * Returns: a FileContents object that holds a byte array which are the contents of the file 
+     *  
+     */
     public FileContents download(String client, String filename, String mode) throws RemoteException
     {
         FileContents f;
+        
+        // check to see if file exists in the cache 
         CachedFileEntry file = findFile(filename);
 
         // Downloading a new file to a client
         // if the file does not exist, then cache it
         if(file == null){
             System.out.println("File does not exist in cache"); 
+            // get the contents of the file 
             var contents = getFileContent(filename);
 
-            // if mode is w then we return an empty file
+            // if mode is r then return null - cannot read file that DNE
             if (contents.length == 0 && mode.equals("r")) {
                 System.out.println("File Does not exist - Cannot be opened in read mode.");
                 return null;
             }
 
-            // first create a cached file entry ******* COME BACK AND ADD CONTENTS *******
+            // first create a cached file entry - with default state as Write_Shared
             var newFile = new CachedFileEntry(filename, client, "Write_Shared", contents);
-            newFile.setOwner(client);
+
             System.out.println("FIle " + filename + " has been added to the server cache");
 
             // add client to readers list
@@ -56,14 +71,14 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
             // then add the file to the cache
             this.cache.add(newFile);
 
-
-            
-
+            //return the contents to the client 
             return new FileContents(contents);
         }
         // Downloading a cached file to a client
-        else{ // file is already cached at the server
+        else{ 
+            // file is already cached at the server
             System.out.println("File is already cached"); 
+
             if (file.getState().equalsIgnoreCase("Not_Shared")) {
                 System.out.println("File " + filename + " is in state Not_shared"); 
                 if (mode.equals("r")) { // read
@@ -76,7 +91,7 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
                     System.out.println("Not_shared being accessed in w");
                     // register this client as the owner
                     System.out.println("Previous Owner: " + file.getOwner());
-                    file.setOwner(client);
+                    file.setOwner(client); 
                     System.out.println("New Owner: " + file.getOwner()); 
                     // file state changed to Write_shared
                     file.setState("Write_Shared");
@@ -113,17 +128,20 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
                     // file state goes to Ownership_Change
                     file.setState("Ownership_Change"); 
             
-                    // Step 1: Reset the last Upload Client.
+                    // Step 1: Reset the last Upload Client
                     file.resetLastUploadClient();
             
-                    // Step 2: Call WriteBack on the client.
+                    // Step 2: Call WriteBack on the client
                     requestWriteBack(file.getOwner());
                     System.out.println("Writeback() has been called");
             
-                    // Step 3: Wait for the upload to complete.
+                    // Step 3: Wait for the upload to complete
                     file.waitForUploadClient();
+
+                    // step 4: set the new owner 
                     file.setOwner(client);
-            
+                    
+                    // return the new file contents 
                     return new FileContents(file.contents);
                 } else {
                     throw new RemoteException();
@@ -139,11 +157,12 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
                 } else if (mode.equals("w")) {
                     System.out.println("Ownership_Change being accessed in w, waiting for Write_Shared state");
                     
-                    // COME BACK AND FIX
+                    // wait for client to upload 
                     file.waitForState("Write_Shared");
                 }
             }
 
+            // setting the contents  
             f = new FileContents(file.getContents());
         }
 
@@ -151,6 +170,19 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
         // return file contents object to client
         return f;
     }
+
+    /*
+     * this function is called by the client once the server asks the client to writeback in which the 
+     * client sets the new/updates contents of th requested file. upload() then sets the new contents 
+     * in the server cache and invalidates all readers of the specified file. 
+     * 
+     * Parameters: client: the IP name of the client 
+     *             file name: the name of the file that is being updated 
+     *             contents: the updated contents of the file
+     * 
+     * Returns: boolean: whether or not the contents were successfully updated and all readers invalidated
+     *   
+     */
 
     public boolean upload( String client, String filename, FileContents contents ) throws RemoteException{
         CachedFileEntry file = findFile(filename);
@@ -162,10 +194,13 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
             // and the file state is Ownership_Change OR Write_Shared
             if((file.getState().equalsIgnoreCase("Ownership_Change"))
                     || (file.getState().equalsIgnoreCase("Write_Shared"))){
+                
 
+                // set new state if currently Ownership_Change
                 if(file.getState().equalsIgnoreCase("Ownership_Change")){
                     file.setState("Write_Shared");
                 }
+                // set new state if currently Write_Shared
                 else if(file.getState().equalsIgnoreCase("Write_Shared")){
                     file.setState("Not_Shared"); 
                 }
@@ -176,7 +211,7 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
                 // Inform all readers to invalidate the cache.
                 invalidateClientCaches(file.getReaders());
 
-                // Now note that upload has been completed.
+                // Now note that upload has been completed
                 file.setLastUploadClient(client);
             }
             else{
@@ -187,12 +222,20 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
         return true;
     }
 
+    /*
+     * This is where the clients writeback() is called. we first use 
+     * naming.lookup to find each client and then use the client 
+     * interface to call writeback.
+     * 
+     * Parameters: client: the client that we are requesting the writeback from 
+     */
     private void requestWriteBack(String client) {
         try{
             var uri = "rmi://" + client + ":" + port + "/fileclient";
             System.out.printf("Requesting Write Back from Client: %s\n", uri);
+            // look up each client 
             var clientFace = (ClientInterface)Naming.lookup( uri );
-            clientFace.writeback();
+            clientFace.writeback(); // call their writeback()
             System.out.printf("Request completed for Write Back from Client: %s\n", uri);
         }
         catch (Exception e){
@@ -201,13 +244,21 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
 
     }
 
+    /*
+     * This is where invalidate is called. it iterates through the cleints list, 
+     * uses naming.lookup to find each client, and invalidates their file.
+     * 
+     * Parameters: a vector of client IP's  
+     * 
+     */
     private void invalidateClientCaches(Vector<String> clients) {
         // loop through the readers of this file and invalidate for each reader/client
         for (String client : clients) {
             try{
                 System.out.printf("Invalidate Client: %s\n", client);
+                // find each client and establish a connection
                 var clientFace = (ClientInterface)Naming.lookup( "rmi://" + client + ":" + port + "/fileclient" );
-                clientFace.invalidate();
+                clientFace.invalidate(); // call the clients invalidate function 
             }
             catch (Exception e){
                 e.printStackTrace();
@@ -215,6 +266,13 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
         }
     }
 
+    /*
+     * checks to see if a given file is in the server cache. 
+     * 
+     * Parameters: a string filename which is the file we are looking for 
+     * 
+     * Returns: a CachedFileEntry associated to the file if found, otherwise null 
+     */
     private CachedFileEntry findFile(String filename){
         for(int i = 0; i < this.cache.size(); i++){
             var file = this.cache.elementAt(i);
@@ -226,31 +284,50 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
         return null;
     }
 
+    /*
+     * This method retrieves the contents of a given file from the current 
+     * directory. 
+     * 
+     * Parameters: string filename which is the file we are looking for 
+     * 
+     * Returns: a byte array of the contents 
+     */
     private byte[] getFileContent(String fileName) throws RemoteException {
+        // get the current directory 
         var currentDirectory = Paths.get(System.getProperty("user.dir"));
+        // ge the filepath of the given file 
         var filePath = currentDirectory.resolve(Paths.get(fileName));
 
-        //System.out.println("Path: " + filePath); 
+        System.out.println("Path: " + filePath); 
 
+        // if the file doesnt exist then return an empty byte array  
         if (!Files.exists(filePath)) {
             return new byte[0];
         }
 
         try {
+            //otherwise return the contents of the file 
             return Files.readAllBytes(filePath);
         } catch (Exception ex) {
             throw new RemoteException(ex.toString());
         }
     }
 
+    /*
+     * This method is called right before the server is terminated. it iterates through
+     * the cache and writes all the files back to the current directory.
+     */
     private void writeFileToDirectory(){
+        // get the current directory 
         var currentDirectory = Paths.get(System.getProperty("user.dir"));
-
+        //iterate through the server cache 
         for(int i = 0; i < cache.size(); i++){
-            String filename = cache.get(i).getName(); 
+            String filename = cache.get(i).getName(); //filename 
             System.out.println("Filename " + filename);
+            // get the file path for the file 
             var filePath = currentDirectory.resolve(Paths.get(filename));
             System.out.println("FilePath: " + filePath); 
+            // use FileOutputStream to write the contents to the file 
             try(FileOutputStream fs = new FileOutputStream(filePath.toFile())){
                 fs.write(cache.get(i).getContents()); 
                 System.out.println("File " + filename + " written to the current directory successfully"); 
@@ -303,7 +380,7 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
 
             System.out.println("Connected");
 
-            Scanner scan = new Scanner(System.in); 
+            Scanner scan = new Scanner(System.in); //used to get the input for quit/exit
             String input = ""; 
 
             // the server needs to be terminated using quit or exit
@@ -318,6 +395,8 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
                     // file contents from its file cache to the local disk
                     server.writeFileToDirectory();
 
+                    System.out.println("Terminating"); 
+
                     // exit 
                     System.exit(0);
                 }
@@ -330,8 +409,9 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
         }
     }
 
-
-
+    /*
+     * This class is used to store all the contents of the server cache. 
+     */
     private class CachedFileEntry {
 
         private String name; // a cached file name 
@@ -371,10 +451,12 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
         public void setState(String state) {
             synchronized(this) { 
                 this.state = state; 
-                notifyAll();
+                notifyAll(); //when state has changed 
             }
         }
         
+        // wait for the state to go back to write_shared so that execution can contine 
+        // when we are currently in ownership change 
         public void waitForState(String expectedState) {
             try {
                 synchronized (this) {
@@ -388,12 +470,14 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
             }
         }
 
+        // if the reader is not already in the readers list, add it 
         public void addReaders(String client){ 
             if(!this.readers.equals(client)){
                 this.readers.add(client); 
             }
         }
 
+        //sets last upload client to null and wakes up the waiting threads 
         public void resetLastUploadClient() {
             synchronized (this) {
                 this.lastUploadClient = null;
@@ -401,6 +485,7 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
             }
         }
 
+        // updates lastUploadClient with the current client and wakes up waiting threads
         public void setLastUploadClient(String client) {
             System.out.printf("setLastUploadClient: %s\n", client);
             synchronized (this) {
@@ -409,6 +494,7 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
             }
         }
 
+        //  waits until lastUploadClient is not null and then continues execution
         public void waitForUploadClient() {
             try {
                 synchronized (this) {
