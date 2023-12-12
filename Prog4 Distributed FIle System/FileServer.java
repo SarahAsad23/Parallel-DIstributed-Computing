@@ -185,6 +185,7 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
      */
 
     public boolean upload( String client, String filename, FileContents contents ) throws RemoteException{
+        // check to see if file exists in cache 
         CachedFileEntry file = findFile(filename);
 
         System.out.printf("Upload called: Client=%s, File=%s\n", client, filename);
@@ -198,23 +199,26 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
 
                 // set new state if currently Ownership_Change
                 if(file.getState().equalsIgnoreCase("Ownership_Change")){
+                    // change state to Write_Shared
                     file.setState("Write_Shared");
                 }
                 // set new state if currently Write_Shared
                 else if(file.getState().equalsIgnoreCase("Write_Shared")){
+                    // change state to Not_Shared
                     file.setState("Not_Shared"); 
                 }
 
-                //update the file contents
+                // update the file contents with the new contents 
                 file.setContents(contents.get());
 
-                // Inform all readers to invalidate the cache.
+                // Inform all readers to invalidate the cache
                 invalidateClientCaches(file.getReaders());
 
                 // Now note that upload has been completed
                 file.setLastUploadClient(client);
             }
             else{
+                // if in states Not_Shared or Read_Shared, return false
                 return false;
             }
         }
@@ -245,7 +249,7 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
     }
 
     /*
-     * This is where invalidate is called. it iterates through the cleints list, 
+     * This is where invalidate is called. it iterates through the clients list, 
      * uses naming.lookup to find each client, and invalidates their file.
      * 
      * Parameters: a vector of client IP's  
@@ -295,7 +299,7 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
     private byte[] getFileContent(String fileName) throws RemoteException {
         // get the current directory 
         var currentDirectory = Paths.get(System.getProperty("user.dir"));
-        // ge the filepath of the given file 
+        // get the filepath of the given file 
         var filePath = currentDirectory.resolve(Paths.get(fileName));
 
         System.out.println("Path: " + filePath); 
@@ -306,7 +310,7 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
         }
 
         try {
-            //otherwise return the contents of the file 
+            // otherwise return the contents of the file 
             return Files.readAllBytes(filePath);
         } catch (Exception ex) {
             throw new RemoteException(ex.toString());
@@ -320,7 +324,7 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
     private void writeFileToDirectory(){
         // get the current directory 
         var currentDirectory = Paths.get(System.getProperty("user.dir"));
-        //iterate through the server cache 
+        // iterate through the server cache 
         for(int i = 0; i < cache.size(); i++){
             String filename = cache.get(i).getName(); //filename 
             System.out.println("Filename " + filename);
@@ -368,9 +372,10 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
             int port = Integer.parseInt(args[0]);
 
             System.out.println("Starting FileServer");
-            FileServer server = new FileServer(port);
 
             // create a server object
+            FileServer server = new FileServer(port);
+            
             // start the registry
             System.out.println("Starting Registry");
             startRegistry(port);
@@ -410,7 +415,7 @@ public class FileServer extends UnicastRemoteObject implements ServerInterface {
     }
 
     /*
-     * This class is used to store all the contents of the server cache. 
+     * This class is used to store a file in the server cache. 
      */
     private class CachedFileEntry {
 
